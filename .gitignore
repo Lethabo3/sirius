@@ -1,1 +1,1 @@
-.vercel
+echo "sirius/config.php" > .gitignore
