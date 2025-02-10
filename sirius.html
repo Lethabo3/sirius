@@ -1,0 +1,1307 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI Search</title>
+        <style>
+            /* Your existing styles */
+            @font-face {
+                font-family: 'Satoshi-Regular';
+                src: url('Satoshi-Regular.woff2') format('woff2'),
+                    url('Satoshi-Regular.woff') format('woff'),
+                    url('Satoshi-Regular.ttf') format('truetype');
+                font-weight: 400;
+                font-display: swap;
+                font-style: normal;
+            }
+
+            @font-face {
+                font-family: 'Satoshi-Italic';
+                src: url('Satoshi-Italic.woff2') format('woff2'),
+                    url('Satoshi-Italic.woff') format('woff'),
+                    url('Satoshi-Italic.ttf') format('truetype');
+                font-weight: 400;
+                font-display: swap;
+                font-style: italic;
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body, html {
+                font-family: 'Satoshi-Regular', sans-serif;
+                background-color: #000000;
+                color: #ffffff;
+                line-height: 1.6;
+                height: 100vh;
+                width: 100%;
+                overflow: hidden;
+            }
+
+    /* Update .container */
+    .container {
+        width: 100%;
+        height: 100vh;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        background-size: 50px 50px;
+    }
+
+    /* Add this for expanded state */
+    .container.expanded {
+        display: flex;
+    }
+
+    /* Update .search-group */
+    .search-group {
+        width: 100%;
+        height: 100vh;
+        /* Remove height: 100vh */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(1px);
+    }
+
+    /* Update .content-area */
+    .content-area {
+        flex: 1;
+        opacity: 0;
+        width: 0;
+        display: flex;
+        position: relative;
+        flex-direction: column;
+        padding: 2rem;
+        overflow-y: auto;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        visibility: hidden;
+        /* Add these */
+        flex-grow: 1;
+        max-width: calc(100% - 400px); /* Accounts for sidebar width */
+    }
+
+            .expanded .search-group {
+                width: 400px;
+                align-items: flex-start;
+                justify-content: flex-start;
+                padding: 20px;
+                border-right: 0px solid #333;
+            }
+
+            .textarea-wrapper {
+                width: 100%;
+                max-width: 600px;
+                transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .expanded .textarea-wrapper {
+                max-width: 100%;
+            }
+
+            .hero__title {
+                font-size: 2.2rem;
+                font-weight: lighter;
+                margin-bottom: 1.5rem;
+                color: #ffffff;
+                text-align: center;
+                transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .hero__title em {
+                font-family: 'Satoshi-Italic', sans-serif;
+                font-style: normal;
+                background: linear-gradient(120deg, #fff, #888);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+
+            .expanded .hero__title {
+                text-align: left;
+            }
+
+            .textarea-container {
+                position: relative;
+                width: 100%;
+            }
+
+            .textarea-input {
+                width: 100%;
+                height: 100px;
+                padding: 16px 40px 16px 16px;
+                font-size: 16px;
+                font-family: 'Satoshi-Regular', sans-serif;
+                border: 1px solid #333;
+                border-radius: 8px;
+                resize: none;
+                background-color: #111;
+                color: #fff;
+                outline: none;
+                transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .textarea-input:focus {
+                border-color: #444;
+            }
+
+            .submit-button {
+                position: absolute;
+                right: 10px;
+                bottom: 15px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                outline: none;
+            }
+
+            .submit-icon {
+                padding: 8px;
+                background-color: #222;
+                border-radius: 50%;
+                transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .has-text .submit-icon {
+                background-color: #ffffff;
+                transform: scale(1.1);
+            }
+
+            .has-text .submit-icon svg {
+                stroke: #000000;
+            }
+
+            .navigation-ready .submit-icon {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+
+            .navigation-ready .submit-icon svg {
+        stroke: rgba(255, 255, 255, 0.9);  /* Slightly softened white */
+    }
+
+            .content-area {
+                flex: 1;
+                opacity: 0;
+                width: 0;
+                padding: 60px;
+                overflow-y: auto;
+                transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+                visibility: hidden;
+            }
+
+            .expanded .content-area {
+                opacity: 1;
+                width: auto;
+                visibility: visible;
+            }
+
+            .article {
+    margin-top: 2rem;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeIn 150ms forwards;
+}
+
+            @keyframes fadeIn {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .article-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 0.5rem;
+            }
+
+            .site-icon {
+                width: 16px;
+                height: 16px;
+                border-radius: 4px;
+            }
+
+            .article-title {
+                font-size: 1.2rem;
+                color: #fff;
+            }
+
+            .article-url {
+                font-size: 14px;
+                color: rgba(255,255,255,0.4);
+                text-decoration: none;
+                margin-bottom: 1rem;
+                display: block;
+                transition: color 150ms ease;
+            }
+
+            .article-url:hover {
+                color: rgba(255,255,255,0.8);
+            }
+
+            .article-content {
+                font-size: 16px;
+                line-height: 1.6;
+                color: rgba(255,255,255,0.9);
+            }
+
+            .ai-overview {
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: linear-gradient(145deg, rgba(40,40,40,0.4) 0%, rgba(20,20,20,0.4) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeIn 150ms forwards;
+}
+
+.overview-title {
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 1rem;
+    font-weight: normal;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.overview-title::before {
+    content: "✨";
+    font-size: 1rem;
+}
+
+.overview-content p {
+    margin-bottom: 1rem;
+}
+
+.overview-content p:last-child {
+    margin-bottom: 0;
+}
+
+            .overview-content {
+                font-size: 16px;
+                line-height: 1.6;
+                color: rgba(255,255,255,0.9);
+            }
+
+            .loading {
+                font-style: italic;
+                color: #666;
+                font-size: 1.2rem;
+            }
+
+            ::selection {
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+            }
+
+            .search-actions {
+        margin-top: 1rem;
+        display: none;
+        gap: 8px;
+    }
+
+    .expanded .search-actions {
+        display: flex;  /* Show when expanded */
+    }
+
+    .action-button {
+        display: flex;
+        align-items: center;
+        font-family: 'Satoshi-Regular', sans-serif;
+        gap: 4px;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: none;
+        border-radius: 6px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 14px;
+        transition: all 150ms ease;
+    }
+
+    .action-button:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .action-button.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+
+    /* Image Grid */
+    .image-results {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 2rem;
+    }
+
+    .image-item {
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #111;
+        transition: transform 150ms ease;
+    }
+
+    .image-item:hover {
+        transform: scale(1.02);
+    }
+
+    .image-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .image-item:hover img {
+        transform: scale(1.05);
+    }
+
+    .video-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 0;
+    margin-top: 2rem;
+}
+
+
+.video-item {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 150ms ease;
+}
+
+    .video-item:hover {
+        transform: translateY(-2px);
+        background: rgba(255,255,255,0.05);
+    }
+
+    .video-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .video-play-button {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.7);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .video-thumbnail-container {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+}
+
+
+.video-info {
+    margin-top: 0.5rem;
+}
+
+.video-title {
+    font-size: 0.9rem;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+    .video-meta {
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .video-duration {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        background: rgba(0,0,0,0.8);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+
+    .video-description {
+        margin-top: 8px;
+        font-size: 14px;
+        color: rgba(255,255,255,0.6);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .channel-name {
+        font-weight: 500;
+    }
+
+    .video-date {
+        color: rgba(255,255,255,0.4);
+    }
+
+    .ai-explanation {
+    position: relative;
+    margin-top: 2.2rem;
+    margin-bottom: 2rem;
+    margin-left: -0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    width: 100%;
+}
+
+
+.explanation-content {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.95);
+    padding: 1.5rem;
+}
+
+.search-results {
+    margin-top: 2rem;
+}
+
+/* Ensure smooth transitions */
+.ai-explanation, .search-results {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeIn 150ms forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.explanation-content p {
+    margin-bottom: 1.5rem;
+}
+
+.explanation-content p:last-child {
+    margin-bottom: 0;
+}
+
+.educational-content {
+    margin-top: 3rem;
+    margin-bottom: 3rem;
+}
+
+.content-title {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 1.5rem;
+    font-weight: normal;
+}
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 2rem;
+}
+
+.video-item {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 150ms ease;
+}
+
+.video-item:hover {
+    transform: translateY(-2px);
+}
+
+.video-thumbnail-container {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    margin-bottom: 0.75rem;
+}
+
+.video-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.video-title {
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;}
+
+/* Base skeleton animation */
+/* Base skeleton animation */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.06) 25%, 
+        rgba(255, 255, 255, 0.1) 37%, 
+        rgba(255, 255, 255, 0.06) 63%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite linear;
+}
+
+/* AI Explanation Skeleton */
+.skeleton-ai-explanation {
+    position: relative;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    width: 100%;
+    min-height: 200px;
+}
+
+.skeleton-text {
+    height: 20px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+.skeleton-text:last-child {
+    width: 80%;
+}
+
+/* Video Grid Skeleton */
+.skeleton-video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.skeleton-video-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.skeleton-thumbnail {
+    aspect-ratio: 16/9;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.skeleton-video-title {
+    height: 20px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skeleton-video-meta {
+    height: 16px;
+    width: 60%;
+    border-radius: 4px;
+}
+
+/* Image Grid Skeleton */
+.skeleton-image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 2rem;
+}
+
+.skeleton-image-item {
+    aspect-ratio: 1;
+    border-radius: 8px;
+}
+
+/* Article Skeleton */
+.skeleton-article {
+    margin-bottom: 3rem;
+}
+
+.skeleton-article-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-site-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+.skeleton-article-title {
+    height: 24px;
+    width: 70%;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.skeleton-article-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skeleton-article-line {
+    height: 16px;
+    border-radius: 4px;
+}
+
+.skeleton-article-line:last-child {
+    width: 60%;
+}        </style>
+    </head>
+    <body>
+        <div class="container" id="container">
+            <div class="search-group">
+                <div class="textarea-wrapper">
+                    <h1 class="hero__title">Search <em>Something</em></h1>
+                    
+                    <div class="textarea-container">
+                        <textarea 
+                            class="textarea-input"
+                            id="searchInput"
+                        ></textarea>
+
+                        <button class="submit-button" id="submitButton">
+                            <div class="submit-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5l7 7-7 7" />
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="search-actions">
+                        <button class="action-button" data-type="images">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                            Images
+                        </button>
+                        <button class="action-button" data-type="videos">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                                <path d="M10 8l6 4-6 4V8z"/>
+                            </svg>
+                            Videos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-area" id="results"></div>
+        </div>
+
+        <script>
+            const container = document.getElementById('container');
+            const searchInput = document.getElementById('searchInput');
+            const results = document.getElementById('results');
+            const submitButton = document.getElementById('submitButton');
+            const actionButtons = document.querySelectorAll('.action-button');
+
+            // Implement request debouncing to prevent excessive API calls
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Cache manager for search results
+    class SearchCache {
+        constructor(maxSize = 50) {
+            this.cache = new Map();
+            this.maxSize = maxSize;
+        }
+
+        getKey(query, type) {
+            return `${query}-${type}`;
+        }
+
+        get(query, type) {
+            return this.cache.get(this.getKey(query, type));
+        }
+
+        set(query, type, results) {
+            if (this.cache.size >= this.maxSize) {
+                const firstKey = this.cache.keys().next().value;
+                this.cache.delete(firstKey);
+            }
+            this.cache.set(this.getKey(query, type), {
+                results,
+                timestamp: Date.now()
+            });
+        }
+
+        has(query, type) {
+            const key = this.getKey(query, type);
+            const entry = this.cache.get(key);
+            if (!entry) return false;
+            
+            // Cache results valid for 5 minutes
+            const isValid = (Date.now() - entry.timestamp) < 5 * 60 * 1000;
+            if (!isValid) this.cache.delete(key);
+            return isValid;
+        }
+    }
+
+
+            function handleNavigation(query) {
+                // Handle shortcuts
+                if (query.startsWith('/')) {
+                    const site = query.slice(1).toLowerCase();
+                    return `https://${site}.com`;
+                }
+
+                // Handle natural language navigation
+                const words = query.toLowerCase().split(' ');
+                const navigationWords = ['go', 'open', 'visit', 'goto', 'enter'];
+                const toWords = ['to', 'on', 'in'];
+                
+                for (let i = 0; i < words.length; i++) {
+                    if (navigationWords.includes(words[i])) {
+                        const nextWord = words[i + 1];
+                        const siteWord = toWords.includes(nextWord) ? words[i + 2] : nextWord;
+                        
+                        if (siteWord) {
+                            const cleanSite = siteWord.replace(/\.(com|org|net)$/, '');
+                            return `https://${cleanSite}.com`;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            function getWebsiteInfo(url) {
+                try {
+                    const domain = new URL(url).hostname;
+                    return {
+                        icon: `https://www.google.com/s2/favicons?domain=${domain}`,
+                        name: domain.replace('www.', '').split('.')[0]
+                            .split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                    };
+                } catch {
+                    return { icon: null, name: url };
+                }
+            }
+
+            async function getAISummary(query) {
+    try {
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer AIzaSyCbODz7UC5WuOdydsbBT_KHwtUOfQnIAAc`
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: `Provide a clear, concise overview of: ${query}. 
+                               Focus on key facts and context. 
+                               Keep the response under 3 paragraphs.`
+                    }]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('AI summary request failed');
+        }
+        
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+        console.error('AI summary failed:', error);
+        return null; // Return null instead of error message to handle gracefully
+    }
+}
+// Cache system to store search results for instant tab switching
+const searchCache = {
+    currentQuery: null,
+    results: {
+        images: null,
+        videos: null
+    }
+};
+
+async function searchAI(query, type = 'text') {
+    // Determines if a query requires an AI response by analyzing its structure and intent
+    function isExplanationQuery(query) {
+        const queryLower = query.toLowerCase();
+        
+        // Define patterns that indicate different types of questions or requests
+        const patterns = {
+            // Questions seeking factual information or explanations
+            questionStarters: ['what', 'why', 'how', 'who', 'when', 'where', 'which', 'explain', 'describe', 'tell me about'],
+            
+            // Terms indicating comparison or evaluation requests
+            evaluationTerms: ['best', 'worst', 'better', 'worse', 'good', 'bad', 'pros', 'cons', 'advantages', 'disadvantages'],
+            
+            // Words suggesting the user wants advice or recommendations
+            adviceTerms: ['should', 'recommend', 'worth', 'need to', 'help me', 'guide', 'tips'],
+            
+            // Terms related to understanding concepts or processes
+            conceptTerms: ['mean', 'means', 'meaning', 'works', 'working', 'function', 'purpose', 'used for', 'definition'],
+            
+            // Words indicating analysis or comparison needs
+            analysisTerms: ['compare', 'versus', 'vs', 'difference between', 'impact of', 'effect of', 'analysis']
+        };
+
+        // Check if query matches any of our defined patterns
+        return queryLower.includes('?') ||
+               patterns.questionStarters.some(term => queryLower.startsWith(term)) ||
+               patterns.evaluationTerms.some(term => queryLower.includes(term)) ||
+               patterns.adviceTerms.some(term => queryLower.includes(term)) ||
+               patterns.conceptTerms.some(term => queryLower.includes(term)) ||
+               patterns.analysisTerms.some(term => queryLower.includes(term)) ||
+               queryLower.match(/^(is|are|can|will|does|do|has|have|should|would|could)/);
+    }
+
+    // Fetches an AI response from the Gemini API
+    async function getAIResponse(query) {
+        try {
+            const response = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyCbODz7UC5WuOdydsbBT_KHwtUOfQnIAAc',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: query }] }]
+                    })
+                }
+            );
+            
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text;
+        } catch (error) {
+            console.error('AI response error:', error);
+            throw new Error('Failed to get AI response');
+        }
+    }
+
+    // Fetches video results using the Tavily API
+    async function getVideos(query) {
+        const response = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer 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'
+            },
+            body: JSON.stringify({
+                query: `${query} site:youtube.com`,
+                search_type: 'video',
+                include_videos: true,
+                domains: ['youtube.com'],
+                max_results: 10
+            })
+        });
+        
+        const data = await response.json();
+        return data.results.filter(result => result.url.includes('youtube.com/watch'));
+    }
+
+    // Fetches image results from Pixabay
+    async function getImages(query) {
+        try {
+            const pixabayURL = new URL('https://pixabay.com/api/');
+            pixabayURL.searchParams.set('key', '48730638-ee4ce5a75ed7c861f5a3db7c0');
+            pixabayURL.searchParams.set('q', query.trim());
+            pixabayURL.searchParams.set('per_page', '30');
+            pixabayURL.searchParams.set('image_type', 'photo');
+            
+            const response = await fetch(pixabayURL.toString());
+            const data = await response.json();
+            
+            return data.hits?.map(hit => ({
+                url: hit.pageURL,
+                image_url: hit.webformatURL,
+                title: hit.tags
+            })) || [];
+        } catch (error) {
+            console.error('Image fetch error:', error);
+            return [];
+        }
+    }
+
+    // Main search function that coordinates all search activities
+    async function performSearch() {
+        // Reset cache if this is a new query
+        if (searchCache.currentQuery !== query) {
+            searchCache.currentQuery = query;
+            searchCache.results = {
+                images: null,
+                videos: null
+            };
+        }
+
+        // Handle AI queries
+        if (type === 'text' && isExplanationQuery(query)) {
+            try {
+                // Get AI response and start fetching videos in parallel
+                const [aiContent, videos] = await Promise.all([
+                    getAIResponse(query),
+                    getVideos(query)
+                ]);
+
+                if (!aiContent) {
+                    throw new Error('Failed to get AI response');
+                }
+
+                // Cache video results for later use
+                searchCache.results.videos = videos;
+
+                // Fetch images in the background
+                getImages(query).then(images => {
+                    searchCache.results.images = images;
+                }).catch(console.error);
+
+                // Return AI response with optional video suggestions
+                return `
+                    <div class="ai-explanation">
+                        <div class="explanation-content">${aiContent}</div>
+                    </div>
+                    ${videos.length > 0 ? `
+                        <div class="video-grid">
+                            ${videos.slice(0, 3).map(video => {
+                                const videoId = video.url.split('v=')[1]?.split('&')[0];
+                                return videoId ? `
+                                    <a href="${video.url}" target="_blank" class="video-item">
+                                        <div class="video-thumbnail-container">
+                                            <img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg"
+                                                alt="${video.title}"
+                                                class="video-thumbnail"
+                                                loading="lazy">
+                                            <div class="video-play-button">▶</div>
+                                        </div>
+                                        <div class="video-info">
+                                            <h3 class="video-title">${video.title}</h3>
+                                        </div>
+                                    </a>
+                                ` : '';
+                            }).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } catch (error) {
+                console.error('AI query error:', error);
+                return '<div class="error">Failed to get response. Please try again.</div>';
+            }
+        }
+
+        // Handle regular searches (text, images, videos)
+        try {
+            // Check cache for image/video requests
+            if (type === 'images' && searchCache.results.images) {
+                return generateImageHTML(searchCache.results.images);
+            }
+            if (type === 'videos' && searchCache.results.videos) {
+                return generateVideoHTML(searchCache.results.videos);
+            }
+
+            // For initial text search, start background fetching
+            if (type === 'text') {
+                Promise.all([
+                    getImages(query),
+                    getVideos(query)
+                ]).then(([images, videos]) => {
+                    searchCache.results.images = images;
+                    searchCache.results.videos = videos;
+                }).catch(console.error);
+
+                // Perform text search
+                const textResponse = await fetch('https://api.tavily.com/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer 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'
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        search_depth: 'advanced',
+                        max_results: 10
+                    })
+                });
+
+                const results = await textResponse.json();
+                return generateTextHTML(results.results);
+            }
+
+            // Fetch fresh results if not in cache
+            if (type === 'images') {
+                const images = await getImages(query);
+                searchCache.results.images = images;
+                return generateImageHTML(images);
+            }
+            if (type === 'videos') {
+                const videos = await getVideos(query);
+                searchCache.results.videos = videos;
+                return generateVideoHTML(videos);
+            }
+
+        } catch (error) {
+            console.error('Search error:', error);
+            return `<div class="error">Search failed: ${error.message}</div>`;
+        }
+    }
+
+    // HTML generation functions for different types of content
+    function generateImageHTML(images) {
+        return `
+            <div class="image-results">
+                ${images.map(img => `
+                    <a href="${img.url}" target="_blank" class="image-item">
+                        <img src="${img.image_url}" 
+                            alt="${img.title || 'Image result'}"
+                            loading="lazy">
+                    </a>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function generateVideoHTML(videos) {
+        return `
+            <div class="video-results">
+                ${videos.map(video => {
+                    const videoId = video.url.split('v=')[1]?.split('&')[0];
+                    const thumbnailUrl = videoId ? 
+                        `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : 
+                        video.image_url;
+                    return `
+                        <a href="${video.url}" target="_blank" class="video-item">
+                            <div class="video-thumbnail-container">
+                                <img src="${thumbnailUrl}" 
+                                    alt="${video.title}"
+                                    class="video-thumbnail"
+                                    loading="lazy">
+                                <div class="video-play-button">▶</div>
+                            </div>
+                            <div class="video-info">
+                                <h3 class="video-title">${video.title}</h3>
+                            </div>
+                        </a>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function generateTextHTML(results) {
+        return results.map((result, index) => {
+            const siteInfo = getWebsiteInfo(result.url);
+            return `
+                <article class="article" style="animation-delay: ${(index + 1) * 50}ms">
+                    <div class="article-header">
+                        <img src="${siteInfo.icon}" class="site-icon" alt="" 
+                            onerror="this.style.display='none'">
+                        <h2 class="article-title">${siteInfo.name}</h2>
+                    </div>
+                    <a href="${result.url}" class="article-url" target="_blank">${result.url}</a>
+                    <h2 class="article-title">${result.title}</h2>
+                    <div class="article-content">${result.content}</div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    // Execute the search and return results
+    return performSearch();
+}
+
+    searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                const navigationUrl = handleNavigation(query);
+                
+                if (navigationUrl) {
+                    submitButton.classList.add('navigation-ready');
+                } else {
+                    submitButton.classList.remove('navigation-ready');
+                }
+
+                if (query.length > 0) {
+                    submitButton.classList.add('has-text');
+                } else {
+                    submitButton.classList.remove('has-text');
+                }
+            });
+
+            submitButton.addEventListener('click', async () => {
+    const query = searchInput.value.trim();
+    const navigationUrl = handleNavigation(query);
+    
+    if (navigationUrl) {
+        window.location.href = navigationUrl;
+        return;
+    }
+
+    if (query) {
+        container.classList.add('expanded');
+        // Show appropriate skeleton based on query type
+        const isQuestion = query.includes('?') || 
+            ['what', 'why', 'how', 'who', 'when', 'where', 'which'].some(word => 
+                query.toLowerCase().startsWith(word));
+                
+        results.innerHTML = isQuestion ? 
+            getAIExplanationSkeleton() + getVideoGridSkeleton() :
+            getArticleSkeleton();
+            
+        const searchResult = await searchAI(query, 'text');
+        results.innerHTML = searchResult;
+    }
+});
+
+            document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            container.classList.remove('expanded');
+            results.innerHTML = '';
+        }
+        if (e.key === 'Enter' && !e.shiftKey && document.activeElement === searchInput) {
+            e.preventDefault();
+            submitButton.click();
+        }
+    });
+
+    actionButtons.forEach(button => {
+    button.addEventListener('click', async () => {
+        actionButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        
+        const searchType = button.dataset.type;
+        const query = searchInput.value.trim();
+        
+        if (query) {
+            // Show appropriate skeleton based on content type
+            results.innerHTML = searchType === 'images' ? 
+                getImageGridSkeleton() : 
+                getVideoGridSkeleton(6);
+                
+            const searchResult = await searchAI(query, searchType);
+            results.innerHTML = searchResult;
+        }
+    });
+});    
+    // Skeleton loading templates
+// Skeleton loading templates
+function getAIExplanationSkeleton() {
+    return `
+        <div class="skeleton-ai-explanation skeleton">
+            <div class="explanation-content">
+                ${Array(4).fill().map(() => `
+                    <div class="skeleton-text skeleton"></div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function getVideoGridSkeleton(count = 3) {
+    return `
+        <div class="skeleton-video-grid">
+            ${Array(count).fill().map(() => `
+                <div class="skeleton-video-item">
+                    <div class="skeleton-thumbnail skeleton"></div>
+                    <div class="skeleton-video-title skeleton"></div>
+                    <div class="skeleton-video-meta skeleton"></div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function getImageGridSkeleton(count = 12) {
+    return `
+        <div class="skeleton-image-grid">
+            ${Array(count).fill().map(() => `
+                <div class="skeleton-image-item skeleton"></div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function getArticleSkeleton(count = 3) {
+    return `
+        <div class="search-results">
+            ${Array(count).fill().map((_, index) => `
+                <article class="skeleton-article" style="animation-delay: ${(index + 1) * 50}ms">
+                    <h2 class="skeleton-article-title skeleton"></h2>
+                    <div class="skeleton-article-url skeleton" style="width: 60%; height: 16px; margin: 8px 0;"></div>
+                    <div class="skeleton-article-content">
+                        ${Array(3).fill().map(() => `
+                            <div class="skeleton-article-line skeleton"></div>
+                        `).join('')}
+                    </div>
+                </article>
+            `).join('')}
+        </div>
+    `;
+}
+</script>
+    </body>
+    </html>

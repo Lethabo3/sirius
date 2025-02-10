@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixabay Image Search</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 2rem;
+            background-color: #f5f5f5;
+            line-height: 1.5;
+        }
+
+        .search-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-header {
+            margin-bottom: 1rem;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        .search-button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            color: white;
+            background-color: #4a90e2;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .search-button:hover {
+            background-color: #357abd;
+        }
+
+        .search-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+            color: #666;
+        }
+
+        .error {
+            display: none;
+            color: #dc3545;
+            margin: 1rem 0;
+            padding: 0.75rem;
+            background-color: #ffe6e6;
+            border-radius: 4px;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results-header {
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .image-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .image-info {
+            padding: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .image-tags {
+            color: #666;
+            font-size: 0.75rem;
+        }
+
+        .attribution {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .attribution a {
+            color: #4a90e2;
+            text-decoration: none;
+        }
+
+        .attribution a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <div class="search-header">
+            <h1>Image Search</h1>
+        </div>
+        
+        <form class="search-form" id="searchForm">
+            <input 
+                type="text" 
+                class="search-input" 
+                id="searchInput"
+                placeholder="Search for images..."
+                maxlength="100"
+                required
+            >
+            <button type="submit" class="search-button" id="searchButton">
+                Search
+            </button>
+        </form>
+
+        <div class="loading" id="loading">Searching...</div>
+        <div class="error" id="error"></div>
+        
+        <div class="results" id="results">
+            <div class="results-header" id="resultsCount"></div>
+            <div id="imageGrid" class="image-grid"></div>
+        </div>
+
+        <div class="attribution">
+            Images provided by <a href="https://pixabay.com/" target="_blank">Pixabay</a>
+        </div>
+    </div>
+
+    <script>
+        // Configuration object for API settings
+        const config = {
+            API_KEY: '48730638-ee4ce5a75ed7c861f5a3db7c0',
+            BASE_URL: 'https://pixabay.com/api/',
+            DEFAULT_PARAMS: {
+                safesearch: true,
+                per_page: 20,
+                image_type: 'photo'
+            }
+        };
+
+        // DOM elements
+        const elements = {
+            form: document.getElementById('searchForm'),
+            input: document.getElementById('searchInput'),
+            button: document.getElementById('searchButton'),
+            loading: document.getElementById('loading'),
+            error: document.getElementById('error'),
+            results: document.getElementById('results'),
+            resultsCount: document.getElementById('resultsCount'),
+            imageGrid: document.getElementById('imageGrid')
+        };
+
+        // UI state management
+        const ui = {
+            showLoading() {
+                elements.error.style.display = 'none';
+                elements.results.style.display = 'none';
+                elements.loading.style.display = 'block';
+                elements.button.disabled = true;
+            },
+            
+            hideLoading() {
+                elements.loading.style.display = 'none';
+                elements.button.disabled = false;
+            },
+            
+            showError(message) {
+                elements.error.textContent = message;
+                elements.error.style.display = 'block';
+                elements.results.style.display = 'none';
+            },
+            
+            showResults(data, searchTerm) {
+                elements.resultsCount.textContent = 
+                    `Found ${data.totalHits} images for "${searchTerm}"`;
+                
+                elements.imageGrid.innerHTML = data.hits
+                    .map(image => `
+                        <div class="image-card">
+                            <img 
+                                src="${image.webformatURL}" 
+                                alt="${image.tags}"
+                            >
+                            <div class="image-info">
+                                <div class="image-tags">${image.tags}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                
+                elements.results.style.display = 'block';
+            }
+        };
+
+        // Function to fetch images from Pixabay with proper error handling
+        async function searchImages(searchTerm) {
+            // Construct URL with all required parameters
+            const params = new URLSearchParams({
+                key: config.API_KEY,
+                q: searchTerm,
+                ...config.DEFAULT_PARAMS
+            });
+
+            try {
+                const response = await fetch(`${config.BASE_URL}?${params}`);
+                
+                // Check rate limit headers
+                const rateLimit = {
+                    limit: response.headers.get('X-RateLimit-Limit'),
+                    remaining: response.headers.get('X-RateLimit-Remaining'),
+                    reset: response.headers.get('X-RateLimit-Reset')
+                };
+
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        throw new Error(`Rate limit exceeded. Please try again in ${rateLimit.reset} seconds.`);
+                    }
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.totalHits === 0) {
+                    throw new Error('No images found for your search. Try different keywords.');
+                }
+
+                return data;
+            } catch (error) {
+                if (error.name === 'TypeError') {
+                    throw new Error('Network error. Please check your connection and try again.');
+                }
+                throw error;
+            }
+        }
+
+        // Event handler for form submission
+        elements.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const searchTerm = elements.input.value.trim();
+            
+            if (!searchTerm) return;
+
+            // Validate search term length
+            if (searchTerm.length > 100) {
+                ui.showError('Search term cannot exceed 100 characters.');
+                return;
+            }
+
+            ui.showLoading();
+
+            try {
+                const data = await searchImages(searchTerm);
+                ui.showResults(data, searchTerm);
+            } catch (err) {
+                ui.showError(err.message);
+            } finally {
+                ui.hideLoading();
+            }
+        });
+
+        // Input validation
+        elements.input.addEventListener('input', (e) => {
+            const value = e.target.value.trim();
+            elements.button.disabled = !value || value.length > 100;
+        });
+    </script>
+</body>
+</html>
